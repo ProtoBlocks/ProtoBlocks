@@ -1,0 +1,38 @@
+{
+  "name": "protoblocks",
+  "version": "1.0.0",
+  "description": "The better way to implement secure protocols in JavaScript",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "npm run style && npm run unit",
+    "unit": "mocha -u tdd -s 0 --timeout 5000",
+    "style": "standard ./src --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ProtoBlocks/ProtoBlocks.git"
+  },
+  "author": "Vivek Nair <vivek@nair.me> (https://nair.me)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ProtoBlocks/ProtoBlocks/issues"
+  },
+  "homepage": "https://github.com/ProtoBlocks/ProtoBlocks#readme",
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "mocha": "^9.1.3",
+    "standard": "^16.0.4"
+  },
+  "keywords": [
+    "protocol",
+    "crypto",
+    "cryptography",
+    "secure",
+    "security",
+    "implementation",
+    "authentication",
+    "network",
+    "web",
+    "net"
+  ]
+}
