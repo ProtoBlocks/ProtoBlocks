@@ -1,5 +1,4 @@
 const { ProtocolConstructionError, ProtocolExecutionError } = require('./Errors')
-const { Entity } = require('./Entity')
 const uuid = require('uuid-random')
 
 class Protocol {
@@ -18,7 +17,7 @@ class Protocol {
       if (principal.name.length === 0) throw new ProtocolConstructionError('Principal name cannot be empty')
       if (!Array.isArray(principal.inputs)) throw new ProtocolConstructionError('Principal inputs must be an array')
       if (!principal.inputs.every(s => typeof s === 'string')) throw new ProtocolConstructionError('Principal input name must be strings')
-      principal.inputs = principal.inputs.map(s => s.toLowerCase())
+      // principal.inputs = principal.inputs.map(s => s.toLowerCase())
       if ((new Set(principal.inputs)).size !== principal.inputs.length) throw new ProtocolConstructionError('Principal input names contain duplicates')
 
       this.principals.set(principal.name.toLowerCase(), principal)
@@ -28,14 +27,15 @@ class Protocol {
     for (const step of steps) {
       if (typeof step !== 'object') throw new ProtocolConstructionError('Step name must be an object')
       if (typeof step.name !== 'string') throw new ProtocolConstructionError('Step name must be a string')
-      step.name = step.name.toLowerCase()
-      if (step.name.length === 0) throw new ProtocolConstructionError('Step name cannot be empty')
-      if (step.name === 'input') throw new ProtocolConstructionError('Step name \'input\' is reserved')
-      if (step.name === 'output') throw new ProtocolConstructionError('Step name \'output\' is reserved')
-      if (step.name === 'id') throw new ProtocolConstructionError('Step name \'id\' is reserved')
-      if (step.name === 'send') throw new ProtocolConstructionError('Step name \'send\' is reserved')
+      const name = step.name.toLowerCase()
+      if (name.length === 0) throw new ProtocolConstructionError('Step name cannot be empty')
+      if (name === 'input') throw new ProtocolConstructionError('Step name \'input\' is reserved')
+      if (name === 'output') throw new ProtocolConstructionError('Step name \'output\' is reserved')
+      if (name === 'id') throw new ProtocolConstructionError('Step name \'id\' is reserved')
+      if (name === 'entity') throw new ProtocolConstructionError('Step name \'entity\' is reserved')
+      if (name === 'send') throw new ProtocolConstructionError('Step name \'send\' is reserved')
 
-      if (this.steps.has(step.name)) throw new ProtocolConstructionError('Duplicate declaration of step named "' + step.name + '"')
+      if (this.steps.has(name)) throw new ProtocolConstructionError('Duplicate declaration of step named "' + name + '"')
 
       if (typeof step.origin !== 'string') throw new ProtocolConstructionError('Step origin must be a string')
       step.origin = step.origin.toLowerCase()
@@ -75,7 +75,7 @@ class ProtocolInstanceGenerator {
 
     const expectedInputs = new Set(this.protocol.principals.get(this.principal).inputs)
     for (const [key, value] of Object.entries(inputs)) {
-      if (!expectedInputs.has(key.toLowerCase())) throw new ProtocolExecutionError('Unexpected input: "' + key + '"')
+      if (!expectedInputs.has(key)) throw new ProtocolExecutionError('Unexpected input: "' + key + '"')
       instance.parties[this.principal].Input[key] = value
     }
     for (const input of expectedInputs) {
@@ -88,17 +88,25 @@ class ProtocolInstanceGenerator {
     for (const [key, value] of Object.entries(parties)) {
       if (!expectedParties.has(key.toLowerCase())) throw new ProtocolExecutionError('Unexpected party: "' + key + '"')
       if (!(value instanceof Entity)) throw new ProtocolExecutionError('Party must be an Entity: "' + key + '"')
-      if (value.Id) {
+      if (value.id) {
         if (typeof value.id !== 'string') throw new ProtocolExecutionError('Party ID must be a string')
-        instance.parties[key.toLowerCase()].Id = key + '#' + value.Id
+        instance.parties[key.toLowerCase()].Id = (key + '#' + value.id).toLowerCase()
       } else {
-        instance.parties[key.toLowerCase()].Id = key
+        instance.parties[key.toLowerCase()].Id = key.toLowerCase()
       }
+      instance.parties[key.toLowerCase()].Entity = value
+      instance.parties[key.toLowerCase()].send = (data) => {
+        instance.parties[this.principal][instance.step] = data
+        value.send(data)
+      }
+      value.object = instance.parties[key.toLowerCase()]
     }
     for (const party of expectedParties) {
       if (!instance.parties[party].Id) throw new ProtocolExecutionError('Missing required party: "' + party + '"')
     }
 
+    self.register(instance)
+    instance.self = self
     return instance.run()
   }
 }
@@ -117,13 +125,80 @@ class ProtocolInstance {
     })
 
     this.id = uuid()
+
+    this.sync = {}
   }
 
-  run () {
+  async run () {
+    for (const value of Object.values(this.parties)) {
+      await value.Entity.ready()
+    }
 
+    for (const [key, value] of this.protocol.steps) {
+      this.step = key
+      for (const value of Object.values(this.parties)) {
+        value.Entity.step = key
+      }
+
+      if (value.origin === this.principal) {
+        this.result = await value.function(...Object.values(this.parties))
+      } else if (value.recipients.includes(this.principal)) {
+        const data = await new Promise((resolve, reject) => {
+          this.resolve = resolve
+          this.self.wait()
+        })
+        delete this.resolve
+        this.parties[value.origin][key] = data
+      }
+    }
+
+    return this.result
+  }
+}
+
+class Entity {
+  constructor (name) {
+    this.name = name
+    this.id = name
+  }
+
+  register (instance) {
+    if (!(instance instanceof ProtocolInstance)) throw new ProtocolExecutionError('instance must be of type ProtocolInstance')
+    this.instance = instance
+    if (this.resolve) this.resolve(true)
+  }
+
+  ready () {
+    if (this.instance) return Promise.resolve(true)
+    else {
+      return new Promise((resolve, reject) => {
+        this.resolve = resolve
+      })
+    }
+  }
+}
+
+class LocalEntity extends Entity {
+  constructor (name) {
+    super(name)
+    this.id = uuid()
+    this.send = this.send.bind(this)
+  }
+
+  send (data) {
+    this.waiting = null
+    if (this.instance.resolve) this.instance.resolve(data)
+    else this.waiting = data
+  }
+
+  wait () {
+    if (this.waiting && this.instance.resolve) this.instance.resolve(this.waiting)
+    this.waiting = null
   }
 }
 
 module.exports.Protocol = Protocol
 module.exports.ProtocolInstance = ProtocolInstance
 module.exports.ProtocolInstanceGenerator = ProtocolInstanceGenerator
+module.exports.Entity = Entity
+module.exports.LocalEntity = LocalEntity

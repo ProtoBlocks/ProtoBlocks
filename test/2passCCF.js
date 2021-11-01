@@ -1,4 +1,4 @@
-const { Protocol, hash, nonce } = require('../src');
+const { Protocol, hash, nonce, LocalEntity } = require('../src');
 const should = require('chai').should()
 
 
@@ -12,23 +12,41 @@ suite ('ISO_2_Pass_Unilateral_Authentication_Over_CCF', () => {
           {name: "Verifier", inputs: ["Secret"]}
         ],
         steps: [
-          {origin: "Verifier", recipients: ["Prover"], name: "Challenge", function: (Prover, Verifier) => {
+          {origin: "Verifier", recipients: ["Prover"], name: "Challenge", function: async (Prover, Verifier) => {
             const Nonce = nonce();
-            Verifier.send({"Nonce": Nonce});
+            Prover.send({"Nonce": Nonce});
           }},
-          {origin: "Prover", recipients: ["Verifier"], name: "Response", function: (Prover, Verifier) => {
-            const Hash = hash(Challenge.Nonce + Verifier.Id + Prover.Input.Secret);
+          {origin: "Prover", recipients: ["Verifier"], name: "Response", function: async (Prover, Verifier) => {
+            const Hash = hash(Verifier.Challenge.Nonce + Verifier.Id + Prover.Input.Secret);
             Verifier.send({"Hash": Hash});
+          }},
+          {origin: "Verifier", recipients: [], name: "Verify", function: async (Prover, Verifier) => {
+            const Hash = hash(Verifier.Challenge.Nonce + Verifier.Id + Verifier.Input.Secret);
+            return (Hash === Prover.Response.Hash);
           }}
         ]
       }
     );
-
-    this.alice = new LocalEntity("Alice");
-    this.bob = new LocalEntity("Bob");
   })
 
-  test('run', () => {
-    ISO_2_Pass_Unilateral_Authentication_Over_CCF.Prover(this.alice, {Verifier: this.bob});
+  test('valid', async () => {
+    const alice = new LocalEntity("Alice");
+    const bob = new LocalEntity("Bob");
+
+    const secret = nonce();
+    this.protocol.Prover(bob, {Verifier: alice}, {Secret: secret})
+    const result = await this.protocol.Verifier(alice, {Prover: bob}, {Secret: secret})
+
+    result.should.be.true;
+  })
+
+  test('invalid', async () => {
+    const alice = new LocalEntity("Alice");
+    const bob = new LocalEntity("Bob");
+
+    this.protocol.Prover(bob, {Verifier: alice}, {Secret: nonce()})
+    const result = await this.protocol.Verifier(alice, {Prover: bob}, {Secret: nonce()})
+
+    result.should.be.false;
   })
 })
