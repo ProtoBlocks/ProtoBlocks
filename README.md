@@ -10,3 +10,12 @@
 [Security](https://github.com/ProtoBlocks/ProtoBlocks/blob/master/SECURITY.md)
 
 ProtoBlocks is the better way to implement secure protocols in JavaScript.
+
+### Results
+You can reproduce our main results like so:
+
+```
+git clone https://github.com/ProtoBlocks/ProtoBlocks
+npm install
+npm test
+```
