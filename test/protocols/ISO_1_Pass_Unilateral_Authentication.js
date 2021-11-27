@@ -27,7 +27,7 @@ const ISO_1_Pass_Unilateral_Authentication = new Protocol({
     name: 'Verify',
     function: async (Prover, Verifier) => {
       const Timestamp = timestamp(10000)
-      const Plaintext = decrypt(Prover.Response.Ciphertext, Verifier.Input.SecretKey)
+      const Plaintext = decrypt(Prover.Prove.Ciphertext, Verifier.Input.SecretKey)
       return Plaintext === Timestamp + Verifier.Id
     }
   }]

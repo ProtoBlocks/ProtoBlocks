@@ -14,7 +14,7 @@ const Nonce_Return_2_Pass_Unilateral_Authentication = new Protocol({
     origin: 'Verifier',
     recipients: ['Prover'],
     name: 'Challenge',
-    function: async (Verifier, Prover) => {
+    function: async (Prover, Verifier) => {
       const Nonce = nonce()
       const Ciphertext = encrypt(Nonce, Verifier.Input.SecretKey)
       Prover.send({

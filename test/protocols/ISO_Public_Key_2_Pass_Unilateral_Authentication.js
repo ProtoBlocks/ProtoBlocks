@@ -14,7 +14,7 @@ const ISO_Public_Key_2_Pass_Unilateral_Authentication = new Protocol({
     origin: 'Verifier',
     recipients: ['Prover'],
     name: 'Challenge',
-    function: async (Verifier, Prover) => {
+    function: async (Prover, Verifier) => {
       const Nonce = nonce()
       Prover.send({
         Nonce: Nonce
@@ -34,8 +34,8 @@ const ISO_Public_Key_2_Pass_Unilateral_Authentication = new Protocol({
     origin: 'Verifier',
     recipients: [],
     name: 'Verify',
-    function: async Verifier => {
-      const Verify = verify(Verifier.Challenge.Nonce + Verifier.Id, Verifier.Input.PublicKey)
+    function: async (Prover, Verifier) => {
+      const Verify = verify(Verifier.Challenge.Nonce + Verifier.Id, Prover.Response.Signature, Verifier.Input.PublicKey)
       return Verify
     }
   }]

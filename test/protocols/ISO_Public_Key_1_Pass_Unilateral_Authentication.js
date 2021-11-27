@@ -25,9 +25,9 @@ const ISO_Public_Key_1_Pass_Unilateral_Authentication = new Protocol({
     origin: 'Verifier',
     recipients: [],
     name: 'Verify',
-    function: async Verifier => {
+    function: async (Prover, Verifier) => {
       const Timestamp = timestamp(10000)
-      const Verify = verify(Timestamp + Verifier.Id, Verifier.Input.PublicKey)
+      const Verify = verify(Timestamp + Verifier.Id, Prover.Prove.Signature, Verifier.Input.PublicKey)
       return Verify
     }
   }]

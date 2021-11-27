@@ -14,8 +14,8 @@ const Nonce_Return_Public_Key_2_Pass_Unilateral_Authentication = new Protocol({
     origin: 'Verifier',
     recipients: ['Prover'],
     name: 'Challenge',
-    function: async (Verifier, Prover) => {
-      const Nonce = 12345
+    function: async (Prover, Verifier) => {
+      const Nonce = "12345"
       const Ciphertext = encrypt(Nonce, Verifier.Input.PublicKey)
       Prover.send({
         Ciphertext: Ciphertext
@@ -36,7 +36,7 @@ const Nonce_Return_Public_Key_2_Pass_Unilateral_Authentication = new Protocol({
     recipients: [],
     name: 'Verify',
     function: async (Prover, Verifier) => {
-      const Nonce = 12345
+      const Nonce = "12345"
       return Prover.Response.Plaintext === Nonce
     }
   }]
