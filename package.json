@@ -1,6 +1,6 @@
 {
   "name": "protoblocks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The better way to implement secure protocols in JavaScript",
   "main": "src/index.js",
   "scripts": {
