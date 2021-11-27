@@ -14,7 +14,7 @@ const ISO_2_Pass_Unilateral_Authentication_Over_CCF = new Protocol({
     origin: 'Verifier',
     recipients: ['Prover'],
     name: 'Challenge',
-    function: async (Verifier, Prover) => {
+    function: async (Prover, Verifier) => {
       const Nonce = nonce()
       Prover.send({
         Nonce: Nonce
