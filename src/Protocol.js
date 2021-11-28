@@ -179,7 +179,7 @@ class Entity {
 }
 
 class LocalEntity extends Entity {
-  constructor (name) {
+  constructor (name, secure = false) {
     super(name)
     this.id = uuid()
     this.send = this.send.bind(this)
