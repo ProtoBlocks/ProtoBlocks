@@ -1,5 +1,7 @@
 const { ProtocolConstructionError, ProtocolExecutionError } = require('./Errors')
 const uuid = require('uuid-random')
+const datacapsules = require('datacapsulejs')
+const crypto = require('crypto')
 
 class Protocol {
   constructor ({ name, principals, steps }) {
@@ -179,16 +181,40 @@ class Entity {
 }
 
 class LocalEntity extends Entity {
-  constructor (name, secure = false) {
+  constructor (name, secure = false, delay = 0) {
     super(name)
     this.id = uuid()
     this.send = this.send.bind(this)
+    this.secure = secure
+    this.delay = delay
+    if (secure) {
+      const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', {
+        namedCurve: 'P-256'
+      })
+      this.privateKey = privateKey
+      this.publicKey = publicKey
+      this.capsule = new datacapsules.DataCapsule(privateKey, this.id, 1, 'JSON', 0)
+    }
   }
 
   send (data) {
     this.waiting = null
-    if (this.instance.resolve) this.instance.resolve(data)
-    else this.waiting = data
+    if (this.instance.resolve) {
+      if (this.delay) {
+        setTimeout(() => {
+          this.instance.resolve(data)
+        }, this.delay)
+      } else {
+        this.instance.resolve(data)
+      }
+    } else this.waiting = data
+    if (this.secure) {
+      datacapsules.dcWrite(this.capsule, this.privateKey, this.publicKey, JSON.stringify(data))
+      const verify = crypto.createVerify('SHA256')
+      verify.update(this.capsule.recentRecord.headerHash)
+      verify.end()
+      verify.verify(this.publicKey, this.capsule.recentRecord.signature, 'hex')
+    }
   }
 
   wait () {
