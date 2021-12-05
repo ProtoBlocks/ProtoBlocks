@@ -143,7 +143,7 @@ class ProtocolInstance {
       }
 
       if (value.origin === this.principal) {
-        this.result = await value.function(...Object.values(this.parties))
+        this.result = await value.function(this.parties)
       } else if (value.recipients.includes(this.principal)) {
         const data = await new Promise((resolve, reject) => {
           this.resolve = resolve
